@@ -1,7 +1,13 @@
+import * as dynamodb from 'aws-cdk-lib/aws-dynamodb';
 import * as cdk from 'aws-cdk-lib';
 import * as lambdanode from 'aws-cdk-lib/aws-lambda-nodejs';
 import * as lambda from 'aws-cdk-lib/aws-lambda';
 import { Construct } from 'constructs';
+import * as custom from "aws-cdk-lib/custom-resources";
+import { generateBatch } from "../shared/util";
+import { movies } from "../seed/movies"; // Import seed data from movies.ts
+
+
 
 export class SimpleAppStack extends cdk.Stack {
   constructor(scope: Construct, id: string, props?: cdk.StackProps) {
@@ -23,6 +29,29 @@ export class SimpleAppStack extends cdk.Stack {
       cors: {
         allowedOrigins: ["*"], // Allow all origins
       },
+    });
+
+    const moviesTable = new dynamodb.Table(this, "MoviesTable", {
+      billingMode: dynamodb.BillingMode.PAY_PER_REQUEST,
+      partitionKey: { name: "id", type: dynamodb.AttributeType.NUMBER },
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
+      tableName: "Movies",
+    });
+
+    new custom.AwsCustomResource(this, "moviesddbInitData", {
+      onCreate: {
+        service: "DynamoDB",
+        action: "batchWriteItem",
+        parameters: {
+          RequestItems: {
+            [moviesTable.tableName]: generateBatch(movies),
+          },
+        },
+        physicalResourceId: custom.PhysicalResourceId.of("moviesddbInitData"), //.of(Date.now().toString()),
+      },
+      policy: custom.AwsCustomResourcePolicy.fromSdkCalls({
+        resources: [moviesTable.tableArn],
+      }),
     });
 
     // Output the function URL
