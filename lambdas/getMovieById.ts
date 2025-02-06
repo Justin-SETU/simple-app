@@ -7,7 +7,7 @@ const ddbDocClient = createDDbDocClient();
 //Handle incoming http requests
 export const handler: Handler = async (event, context) => {
   try {
-    console.log("Event: ", JSON.stringify(event));
+    console.log("Event: ", JSON.stringify(event)); // Logs the entire event object
     const queryString = event?.queryStringParameters;
     const movieId = queryString ? parseInt(queryString.movieId) : undefined;
 
@@ -29,6 +29,9 @@ export const handler: Handler = async (event, context) => {
         Key: { id: movieId },
       })
     );
+
+    //Logging DynamoDB Response
+    console.log('GetCommand response: ', commandOutput) 
 
     //Handle Invalid Movie IDs
     if (!commandOutput.Item) {
@@ -54,7 +57,8 @@ export const handler: Handler = async (event, context) => {
       },
       body: JSON.stringify(body),
     };
-  } catch (error: any) {
+  } 
+  catch (error: any) {
     console.log(JSON.stringify(error));
     return {
       statusCode: 500,

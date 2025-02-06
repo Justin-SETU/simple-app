@@ -77,10 +77,39 @@ export class SimpleAppStack extends cdk.Stack {
       },
     });
     
-
-    moviesTable.grantReadData(getMovieByIdFn)
-
+    // moviesTable.grantReadData(getMovieByIdFn)
     new cdk.CfnOutput(this, "Get Movie Function Url", { value: getMovieByIdURL.url });
+
+
+    const getAllMoviesFn = new lambdanode.NodejsFunction(
+      this,
+      "GetAllMoviesFn",
+      {
+        architecture: lambda.Architecture.ARM_64, // Uses ARM 64-bit architecture
+        runtime: lambda.Runtime.NODEJS_22_X, // Uses Node.js 22
+        entry: `${__dirname}/../lambdas/getAllMovies.ts`, // Path to the Lambda function
+        timeout: cdk.Duration.seconds(10), // Execution time limit
+        memorySize: 128, // Allocated memory
+        environment: {
+          TABLE_NAME: moviesTable.tableName, // Passes table name to Lambda
+          REGION: "eu-west-1", // AWS region
+        },
+      }
+    );
+    
+    // Create a Function URL for the Lambda
+    const getAllMoviesURL = getAllMoviesFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE, // No authentication required
+      cors: {
+        allowedOrigins: ["*"], // Allows requests from any domain
+      },
+    });
+    
+    // Grant read access to the movies table
+    moviesTable.grantReadData(getAllMoviesFn);
+    
+    // Output the Function URL
+    new cdk.CfnOutput(this, "GetAllMoviesFunctionUrl", { value: getAllMoviesURL.url });
 
     // Output the function URL
     new cdk.CfnOutput(this, "SimpleFunctionUrl", { value: simpleFnURL.url });
