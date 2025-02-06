@@ -54,6 +54,34 @@ export class SimpleAppStack extends cdk.Stack {
       }),
     });
 
+    const getMovieByIdFn = new lambdanode.NodejsFunction(
+      this,
+      "GetMovieByIdFn",
+      {
+        architecture: lambda.Architecture.ARM_64, // Uses ARM 64-bit architecture
+        runtime: lambda.Runtime.NODEJS_22_X, // Uses Node.js 22
+        entry: `${__dirname}/../lambdas/getMovieById.ts`, // Path to the Lambda function code
+        timeout: cdk.Duration.seconds(10), // Execution time limit
+        memorySize: 128, // Allocated memory
+        environment: {
+          TABLE_NAME: moviesTable.tableName, // Passes table name to Lambda
+          REGION: 'eu-west-1', // AWS region
+        },
+      }
+    );    
+
+    const getMovieByIdURL = getMovieByIdFn.addFunctionUrl({
+      authType: lambda.FunctionUrlAuthType.NONE, // No authentication required
+      cors: {
+        allowedOrigins: ["*"], // Allows requests from any domain
+      },
+    });
+    
+
+    moviesTable.grantReadData(getMovieByIdFn)
+
+    new cdk.CfnOutput(this, "Get Movie Function Url", { value: getMovieByIdURL.url });
+
     // Output the function URL
     new cdk.CfnOutput(this, "SimpleFunctionUrl", { value: simpleFnURL.url });
   }
